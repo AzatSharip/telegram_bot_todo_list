@@ -1,2 +1,4 @@
 myenv/
+*.log
+tests.py
 *.json
