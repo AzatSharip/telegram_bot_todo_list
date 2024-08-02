@@ -9,7 +9,7 @@ import json
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-stand = 'dev'
+stand = 'prod'
 
 if stand == 'prod':
     with open("prod_config.json", "r") as config_file:
@@ -89,7 +89,7 @@ def list_messages(update: Update, context: CallbackContext) -> None:
 
 # Функция для удаления сообщения
 def delete_message(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Введите № записи, которую хотите удалить:')
+    update.message.reply_text('Введите № записи, которую хотите удалить или напишите "Отмена":')
     context.user_data['awaiting_delete_id'] = True
     
 
@@ -111,7 +111,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
                 cursor.execute('DELETE FROM checklist WHERE entry_id = %s AND user_id = %s', (message_id, user_id))
                 if cursor.rowcount == 0:
                     update.message.reply_text(f'Запись №{message_id} не найдена. Попробуйте еще раз.')
-                    update.message.reply_text('Введите № записи для удаления:')
+                    update.message.reply_text('Введите № записи для удаления или напишите "Отмена":')
                     return
                 conn.commit()
                 cursor.execute(f"SELECT reorder_entry_id(%s)", (user_id,))
@@ -130,9 +130,13 @@ def handle_message(update: Update, context: CallbackContext) -> None:
                 conn.close()
                 context.user_data['awaiting_delete_id'] = False
                 break
+            elif text == 'Отмена':
+                update.message.reply_text('Удаление отменено.')
+                context.user_data['awaiting_delete_id'] = False
+                break
             else:
                 update.message.reply_text('Пожалуйста, введите корректный номер!')
-                update.message.reply_text('Введите ID записи для удаления:')
+                update.message.reply_text('Введите № записи для удаления или напишите "Отмена":')
                 return
     else:
         save_message(update, context)
@@ -150,6 +154,7 @@ def main() -> None:
     # Создание updater и диспетчера
     updater = Updater(token)
     dispatcher = updater.dispatcher
+    
 
     # Обработчики команд и сообщений
     dispatcher.add_handler(CommandHandler("start", start))
